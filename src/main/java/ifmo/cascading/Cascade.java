@@ -6,11 +6,14 @@ import java.util.*;
  * @author Arkadii Rost
  */
 public class Cascade<T> {
+    private static final int UNDEFINED = -1;
     private final Comparator<T> comparator;
     private final List<T> val;
     private final int[] from;
     private final List<Cascade<T>> next;
     private final int loadFactor;
+    private final int[] selfLinks;
+    private final int[][] nextLinks;
 
     /*
      * Create leaf cascading node.
@@ -23,6 +26,11 @@ public class Cascade<T> {
         this.val = getSortedCopy(val, comparator);
         from = new int[val.size()];
         next = Collections.emptyList();
+        nextLinks = new int[][]{};
+        selfLinks = new int[val.size()];
+        selfLinks[selfLinks.length - 1] = UNDEFINED;
+        for (int i = 0; i < selfLinks.length - 1; i++)
+            selfLinks[i] = i + 1;
     }
 
 
@@ -48,30 +56,41 @@ public class Cascade<T> {
             indexes[i] = next.get(i).loadFactor - 1;
         for (int i = 0; i < cascadedLength; i++) {
             T minVal = null;
-            int minInd = -1;
+            int minInd = UNDEFINED;
             // check self value
-            if (selfIndex < val.size()) {
-                minInd = 0;
+            if (selfIndex < val.size())
                 minVal = sortedVal.get(selfIndex);
-            }
             for (int j = 0; j < next.size(); j++) {
                 List<T> nextVal = next.get(j).val;
                 if (indexes[j] < nextVal.size()) { // has next value
                     T guess = nextVal.get(indexes[j]);
                     if (minVal == null || comparator.compare(guess, minVal) < 0) {
                         minVal = guess;
-                        minInd = j + 1;
+                        minInd = j;
                     }
                 }
             }
             this.val.add(minVal);
             this.from[i] = minInd;
             // update indexes
-            if (minInd == 0) { //self update
+            if (minInd == UNDEFINED) { //self update
                 selfIndex++;
             } else {
-                int j = minInd - 1;
-                indexes[j] += next.get(j).loadFactor;
+                indexes[minInd] += next.get(minInd).loadFactor;
+            }
+        }
+        // linking
+        selfLinks = new int[cascadedLength];
+        nextLinks = new int[cascadedLength][next.size()];
+        selfLinks[cascadedLength - 1] = UNDEFINED;
+        Arrays.fill(nextLinks[cascadedLength - 1], UNDEFINED);
+        for (int j = cascadedLength - 2; j >= 0; j--) {
+            System.arraycopy(nextLinks[j + 1], 0, nextLinks[j], 0, next.size());
+            if (from[j + 1] == UNDEFINED) { // self value
+                selfLinks[j] = j + 1;
+            } else {
+                selfLinks[j] = selfLinks[j + 1];
+                nextLinks[j][from[j + 1]] = j + 1;
             }
         }
     }
@@ -88,13 +107,22 @@ public class Cascade<T> {
         return cur;
     }
 
-    public List<T> getVal() {
-        return val;
-    }
-
     private List<T> getSortedCopy(List<T> val, Comparator<T> comparator) {
         List<T> sorted = new ArrayList<>(val);
         sorted.sort(comparator);
         return sorted;
+    }
+
+    // Testing
+    List<T> getVal() {
+        return val;
+    }
+
+    int[] getSelfLinks() {
+        return selfLinks;
+    }
+
+    int[][] getNextLinks() {
+        return nextLinks;
     }
 }
