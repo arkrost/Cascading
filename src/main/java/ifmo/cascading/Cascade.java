@@ -115,7 +115,7 @@ public class Cascade<T> {
         return cur;
     }
 
-    public List<T> search(T x) {
+    public List<T> search(T x, int[] path) {
         int index = 0;
         int offset = val.size();
         while (offset > 0) {
@@ -129,10 +129,10 @@ public class Cascade<T> {
         List<T> res = new ArrayList<>();
         if (index == val.size()) { // value not found :(
             res.add(null);
-            spread(x, UNDEFINED, res);
+            spread(x, UNDEFINED, res, path, 0);
         } else {
             res.add(getSelfValue(index));
-            spread(x, index, res);
+            spread(x, index, res, path, 0);
         }
         return res;
     }
@@ -147,24 +147,22 @@ public class Cascade<T> {
         return selfVal;
     }
 
-    private void spread(T x, int index, List<T> acc) {
-        if (index == UNDEFINED) {
-            for (Cascade<T> c : next)
-                c.cascadeSearch(UNDEFINED, x, acc);
-        } else {
-            for (int i = 0; i < next.size(); i++) {
-                int innerIndex = UNDEFINED;
-                if (cascadeIndex[index] == i) {
-                    innerIndex = innerIndexes[index];
-                } else if (nextLinks[index][i] != UNDEFINED) {
-                    innerIndex = innerIndexes[nextLinks[index][i]];
-                }
-                next.get(i).cascadeSearch(innerIndex, x, acc);
+    private void spread(T x, int index, List<T> acc, int[] path, int pathIndex) {
+        if (pathIndex >= path.length)
+            return;
+        int ci = path[pathIndex]; // next cascade index
+        int innerIndex = UNDEFINED;
+        if (index != UNDEFINED) {
+            if (cascadeIndex[index] == ci) {
+                innerIndex = innerIndexes[index];
+            } else if (nextLinks[index][ci] != UNDEFINED) {
+                innerIndex = innerIndexes[nextLinks[index][ci]];
             }
         }
+        next.get(ci).cascadeSearch(innerIndex, x, acc, path, pathIndex + 1);
     }
 
-    private void cascadeSearch(int index, T x, List<T> acc) {
+    private void cascadeSearch(int index, T x, List<T> acc, int[] path, int pathIndex) {
         if (index == UNDEFINED)
             index = val.size();
         int endIndex = Math.max(-1, index - loadFactor);
@@ -175,10 +173,10 @@ public class Cascade<T> {
         index++;
         if (index == val.size()) { // no self value
             acc.add(null);
-            spread(x, UNDEFINED, acc);
+            spread(x, UNDEFINED, acc, path, pathIndex);
         } else {
             acc.add(getSelfValue(index));
-            spread(x, index, acc);
+            spread(x, index, acc, path, pathIndex);
         }
     }
 
@@ -189,14 +187,17 @@ public class Cascade<T> {
     }
 
     // Testing
+    @SuppressWarnings("UnusedDeclaration")
     List<T> getVal() {
         return val;
     }
 
+    @SuppressWarnings("UnusedDeclaration")
     int[] getSelfLinks() {
         return selfLinks;
     }
 
+    @SuppressWarnings("UnusedDeclaration")
     int[][] getNextLinks() {
         return nextLinks;
     }

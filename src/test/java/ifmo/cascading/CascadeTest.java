@@ -18,10 +18,10 @@ public class CascadeTest {
         );
 
         Cascade<Float> cascade = Cascade.cascade(Float::compare, data);
-
-        assertEquals(Arrays.asList(6.4f, null, 6.2f, 7.9f), cascade.search(5f));
-        assertEquals(Arrays.asList(9.3f, null, null, 8.1f), cascade.search(8.05f));
-        assertEquals(Arrays.asList(8f, null, null, 8.1f), cascade.search(8f));
-        assertEquals(Arrays.asList(2.4f, 2.3f, 4.4f, 3.5f), cascade.search(2f));
+        int[] path = {0, 0, 0};
+        assertEquals(Arrays.asList(6.4f, null, 6.2f, 7.9f), cascade.search(5f, path));
+        assertEquals(Arrays.asList(9.3f, null, null, 8.1f), cascade.search(8.05f, path));
+        assertEquals(Arrays.asList(8f, null, null, 8.1f), cascade.search(8f, path));
+        assertEquals(Arrays.asList(2.4f, 2.3f, 4.4f, 3.5f), cascade.search(2f, path));
     }
 }
