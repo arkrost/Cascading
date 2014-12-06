@@ -21,7 +21,7 @@ public class Cascade<T> {
      *
      * Assume that {@code val} is not sorted by comparator.
      */
-    public Cascade(Comparator<T> comparator, int loadFactor, List<T> val) {
+    private Cascade(Comparator<T> comparator, int loadFactor, List<T> val) {
         this.comparator = comparator;
         this.loadFactor = loadFactor;
         this.val = getSortedCopy(val);
@@ -43,7 +43,7 @@ public class Cascade<T> {
      *
      * Assume that {@code val} is not sorted by comparator.
      */
-    public Cascade(Comparator<T> comparator, int loadFactor, List<T> val, List<Cascade<T>> next) {
+    private Cascade(Comparator<T> comparator, int loadFactor, List<T> val, List<Cascade<T>> next) {
         this.comparator = comparator;
         this.loadFactor = loadFactor;
         this.next = next;
@@ -115,6 +115,46 @@ public class Cascade<T> {
         return cur;
     }
 
+    public static <T> List<Cascade<T>> cascade(Comparator<T> comparator, List<List<T>> vertexes,
+                                               boolean[][] edges)
+    {
+        int vertexCount = vertexes.size();
+        List<Cascade<T>> cascades = new ArrayList<>(vertexCount);
+        for (int i = 0; i < vertexCount; i++)
+            cascades.add(null);
+        boolean[] cascaded = new boolean[vertexCount];
+        boolean stop = false;
+        while (!stop) {
+            stop = true;
+            for (int u = 0; u < vertexCount; u++) {
+                if (cascaded[u])
+                    continue;
+                boolean canBeCascaded = true;
+                List<Cascade<T>> next = new ArrayList<>();
+                int incomingEdgesCount = 0;
+                for (int v = 0; v < vertexCount; v++) {
+                    if (edges[v][u])
+                        incomingEdgesCount++;
+                    if (!edges[u][v])
+                        continue;
+                    if (cascaded[v]) {
+                        next.add(cascades.get(v));
+                    } else {
+                        canBeCascaded = false;
+                        break;
+                    }
+                }
+                if (canBeCascaded) {
+                    cascaded[u] = true;
+                    cascades.set(u, new Cascade<>(comparator, 2 * incomingEdgesCount, vertexes.get(u), next));
+                    stop = false;
+                    break;
+                }
+            }
+        }
+        return cascades;
+    }
+
     public List<T> search(T x, int[] path) {
         int index = 0;
         int offset = val.size();
@@ -184,21 +224,5 @@ public class Cascade<T> {
         List<T> sorted = new ArrayList<>(val);
         sorted.sort(comparator);
         return sorted;
-    }
-
-    // Testing
-    @SuppressWarnings("UnusedDeclaration")
-    List<T> getVal() {
-        return val;
-    }
-
-    @SuppressWarnings("UnusedDeclaration")
-    int[] getSelfLinks() {
-        return selfLinks;
-    }
-
-    @SuppressWarnings("UnusedDeclaration")
-    int[][] getNextLinks() {
-        return nextLinks;
     }
 }
